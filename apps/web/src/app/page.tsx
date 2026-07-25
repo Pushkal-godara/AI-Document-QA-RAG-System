@@ -12,10 +12,20 @@ export default function HomePage() {
   const router = useRouter();
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [conversationsRefreshKey, setConversationsRefreshKey] = useState(0);
+  // Bumped only on an explicit user switch (new chat / pick a past
+  // conversation) so ChatPanel remounts then. NOT bumped when the backend
+  // assigns a conversationId mid-stream for a brand-new chat - that would
+  // remount (and lose) the in-progress streaming answer.
+  const [chatKey, setChatKey] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !token) router.push('/login');
   }, [isLoading, token, router]);
+
+  function selectConversation(id: string | undefined) {
+    setConversationId(id);
+    setChatKey((k) => k + 1);
+  }
 
   if (isLoading || !token || !user || !tenant) {
     return <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">Loading…</div>;
@@ -40,13 +50,13 @@ export default function HomePage() {
           token={token}
           selectedId={conversationId}
           refreshKey={conversationsRefreshKey}
-          onSelect={setConversationId}
+          onSelect={selectConversation}
         />
       </aside>
 
       <main className="flex flex-1 flex-col">
         <ChatPanel
-          key={conversationId ?? 'new'}
+          key={chatKey}
           token={token}
           conversationId={conversationId}
           onConversationCreated={(id) => {
