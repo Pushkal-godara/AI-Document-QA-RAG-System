@@ -1,0 +1,17 @@
+{
+  "name": "ai-document-qa-rag",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:packages": "npm run build --workspace=packages/shared --workspace=packages/db",
+    "dev:api": "npm run build:packages && npm run start:dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "db:migrate": "npm run db:migrate --workspace=packages/db",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  }
+}
