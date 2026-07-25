@@ -15,15 +15,19 @@ export function buildContextBlock(chunks: RetrievedChunk[]): string {
     .join('\n\n');
 }
 
+export interface PromptResult {
+  system: string;
+  messages: ModelMessage[];
+}
+
 export function buildPromptMessages(
   question: string,
   chunks: RetrievedChunk[],
   history: ModelMessage[],
-): ModelMessage[] {
+): PromptResult {
   const context = chunks.length > 0 ? buildContextBlock(chunks) : '(no relevant documents found for this tenant)';
-  return [
-    { role: 'system', content: `${SYSTEM_PROMPT}\n\nContext:\n${context}` },
-    ...history,
-    { role: 'user', content: question },
-  ];
+  return {
+    system: `${SYSTEM_PROMPT}\n\nContext:\n${context}`,
+    messages: [...history, { role: 'user', content: question }],
+  };
 }

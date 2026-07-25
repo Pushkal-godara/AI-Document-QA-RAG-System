@@ -70,7 +70,7 @@ export class QueryService {
       return;
     }
 
-    const { chunks, promptMessages } = await this.rlsDb.run(async (tx) => {
+    const { chunks, prompt } = await this.rlsDb.run(async (tx) => {
       const [embedding] = await this.ollama.embed([question]);
       const chunks = await retrieveRelevantChunks(tx, user.sub, embedding, 5);
 
@@ -84,14 +84,22 @@ export class QueryService {
         .reverse()
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-      return { chunks, promptMessages: buildPromptMessages(question, chunks, history) };
+      return { chunks, prompt: buildPromptMessages(question, chunks, history) };
     });
 
-    const result = await this.chat.streamAnswer(promptMessages);
+    const result = await this.chat.streamAnswer(prompt.system, prompt.messages);
 
     await result.pipeUIMessageStreamToResponse(res, {
       onFinish: async ({ messages }) => {
         const assistantText = textOf(messages[messages.length - 1]);
+        if (!assistantText.trim()) {
+          // Ollama occasionally returns an empty completion for no apparent
+          // reason (observed in testing). Don't cache or persist a blank
+          // answer - let the next attempt retry the LLM call for real.
+          this.logger.warn(`Empty completion for question: ${question}`);
+          await this.logQuery(user, question, false, Date.now() - start);
+          return;
+        }
         const citations = extractCitations(assistantText, chunks);
         await this.persistTurn(user, conversationId, question, assistantText, citations);
         await this.redis.setEx(

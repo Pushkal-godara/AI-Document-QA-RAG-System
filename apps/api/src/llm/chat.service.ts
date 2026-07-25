@@ -23,11 +23,11 @@ export class ChatService {
     this.baseURL = `${config.getOrThrow<string>('OLLAMA_BASE_URL')}/v1`;
   }
 
-  async streamAnswer(messages: ModelMessage[]) {
+  async streamAnswer(system: string, messages: ModelMessage[]) {
     const { createOpenAICompatible } = await dynamicImport<typeof OpenAICompatible>('@ai-sdk/openai-compatible');
     const { streamText } = await dynamicImport<typeof Ai>('ai');
 
     const provider = createOpenAICompatible({ name: 'ollama', baseURL: this.baseURL });
-    return streamText({ model: provider(this.chatModel), messages });
+    return streamText({ model: provider(this.chatModel), system, messages });
   }
 }
