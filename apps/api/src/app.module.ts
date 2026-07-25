@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { StorageModule } from './storage/storage.module';
 import { OllamaModule } from './llm/ollama.module';
 import { DocumentsModule } from './documents/documents.module';
+import { RedisModule } from './cache/redis.module';
+import { QueryModule } from './query/query.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { DocumentsModule } from './documents/documents.module';
     StorageModule,
     OllamaModule,
     DocumentsModule,
+    RedisModule,
+    QueryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
