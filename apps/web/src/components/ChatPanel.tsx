@@ -3,9 +3,9 @@
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import type { ChunkCitationDto } from '@rag/shared';
+import type { ChunkCitationDto, MessageRating } from '@rag/shared';
 import { API_URL } from '../lib/config';
-import { getConversationMessages } from '../lib/api-client';
+import { getConversationMessages, rateMessage } from '../lib/api-client';
 
 interface ChatPanelProps {
   token: string;
@@ -25,6 +25,7 @@ function rowsToUIMessages(rows: Array<{ id: string; role: string; content: strin
 export function ChatPanel({ token, conversationId, onConversationCreated }: ChatPanelProps) {
   const conversationIdRef = useRef<string | undefined>(conversationId);
   const [citations, setCitations] = useState<Record<string, ChunkCitationDto[]>>({});
+  const [ratings, setRatings] = useState<Record<string, MessageRating | null>>({});
   const [input, setInput] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(Boolean(conversationId));
 
@@ -65,9 +66,26 @@ export function ChatPanel({ token, conversationId, onConversationCreated }: Chat
     // representations of the same conversation.
     const rows = await getConversationMessages(token, id);
     setMessages(rowsToUIMessages(rows));
-    const map: Record<string, ChunkCitationDto[]> = {};
-    for (const r of rows) if (r.citations?.length) map[r.id] = r.citations;
-    setCitations(map);
+    const citationMap: Record<string, ChunkCitationDto[]> = {};
+    const ratingMap: Record<string, MessageRating | null> = {};
+    for (const r of rows) {
+      if (r.citations?.length) citationMap[r.id] = r.citations;
+      ratingMap[r.id] = r.rating ?? null;
+    }
+    setCitations(citationMap);
+    setRatings(ratingMap);
+  }
+
+  async function handleRate(messageId: string, rating: MessageRating) {
+    const convId = conversationIdRef.current;
+    if (!convId) return;
+    const previous = ratings[messageId] ?? null;
+    setRatings((prev) => ({ ...prev, [messageId]: rating }));
+    try {
+      await rateMessage(token, convId, messageId, rating);
+    } catch {
+      setRatings((prev) => ({ ...prev, [messageId]: previous }));
+    }
   }
 
   useEffect(() => {
@@ -102,6 +120,7 @@ export function ChatPanel({ token, conversationId, onConversationCreated }: Chat
             .join('');
           const isUser = message.role === 'user';
           const messageCitations = citations[message.id];
+          const rating = ratings[message.id];
           return (
             <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
               <div
@@ -124,6 +143,30 @@ export function ChatPanel({ token, conversationId, onConversationCreated }: Chat
                         {c.page ? ` · p.${c.page}` : ''}
                       </span>
                     ))}
+                  </div>
+                )}
+                {!isUser && !isStreaming && (
+                  <div className="mt-2 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRate(message.id, 'up')}
+                      aria-label="Good answer"
+                      className={`rounded px-1.5 py-0.5 text-xs ${
+                        rating === 'up' ? 'bg-emerald-200 dark:bg-emerald-800' : 'hover:bg-black/5 dark:hover:bg-white/10'
+                      }`}
+                    >
+                      👍
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRate(message.id, 'down')}
+                      aria-label="Bad answer"
+                      className={`rounded px-1.5 py-0.5 text-xs ${
+                        rating === 'down' ? 'bg-red-200 dark:bg-red-900' : 'hover:bg-black/5 dark:hover:bg-white/10'
+                      }`}
+                    >
+                      👎
+                    </button>
                   </div>
                 )}
               </div>

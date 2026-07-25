@@ -19,10 +19,13 @@ export interface ChunkCitationDto {
   snippet: string;
 }
 
+export type MessageRating = 'up' | 'down';
+
 export interface ChatMessageDto {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   citations?: ChunkCitationDto[];
+  rating?: MessageRating | null;
   createdAt: string;
 }

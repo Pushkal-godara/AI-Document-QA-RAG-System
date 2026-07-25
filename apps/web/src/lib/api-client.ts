@@ -1,4 +1,4 @@
-import type { DocumentDto, ChatMessageDto } from '@rag/shared';
+import type { DocumentDto, ChatMessageDto, MessageRating } from '@rag/shared';
 import { API_URL } from './config';
 
 async function authedFetch(path: string, token: string, init?: RequestInit): Promise<Response> {
@@ -39,4 +39,17 @@ export async function listConversations(token: string): Promise<ConversationDto[
 export async function getConversationMessages(token: string, conversationId: string): Promise<ChatMessageDto[]> {
   const res = await authedFetch(`/conversations/${conversationId}/messages`, token);
   return res.json();
+}
+
+export async function rateMessage(
+  token: string,
+  conversationId: string,
+  messageId: string,
+  rating: MessageRating,
+): Promise<void> {
+  await authedFetch(`/conversations/${conversationId}/messages/${messageId}/feedback`, token, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating }),
+  });
 }

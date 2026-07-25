@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: 'rag-api'
+    static_configs:
+      # apps/api runs on the host (via `npm run dev:api`), not in this
+      # compose network - host.docker.internal reaches it from inside the
+      # prometheus container.
+      - targets: ['host.docker.internal:3001']
