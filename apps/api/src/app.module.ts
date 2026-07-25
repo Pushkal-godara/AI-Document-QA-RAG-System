@@ -10,6 +10,7 @@ import { OllamaModule } from './llm/ollama.module';
 import { DocumentsModule } from './documents/documents.module';
 import { RedisModule } from './cache/redis.module';
 import { QueryModule } from './query/query.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { QueryModule } from './query/query.module';
     DocumentsModule,
     RedisModule,
     QueryModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

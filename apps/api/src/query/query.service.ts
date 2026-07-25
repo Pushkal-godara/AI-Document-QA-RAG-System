@@ -11,6 +11,7 @@ import { RlsDbService } from '../db/rls-db.service';
 import { OllamaService } from '../llm/ollama.service';
 import { ChatService } from '../llm/chat.service';
 import { RedisService } from '../cache/redis.service';
+import { MetricsService } from '../metrics/metrics.service';
 import type { JwtPayload } from '../auth/types';
 import { retrieveRelevantChunks } from './retrieval';
 import { buildPromptMessages } from './prompt';
@@ -46,6 +47,7 @@ export class QueryService {
     private readonly ollama: OllamaService,
     private readonly chat: ChatService,
     private readonly redis: RedisService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async handle(body: QueryRequestBody, user: JwtPayload, res: Response): Promise<void> {
@@ -154,6 +156,7 @@ export class QueryService {
     cacheHit: boolean,
     latencyMs: number,
   ): Promise<void> {
+    this.metrics.recordQuery(cacheHit, latencyMs);
     await this.rlsDb
       .run((tx) =>
         tx.insert(schema.queryLogs).values({

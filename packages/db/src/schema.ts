@@ -163,6 +163,7 @@ export const messages = pgTable(
     role: text('role').notNull(), // 'user' | 'assistant'
     content: text('content').notNull(),
     citations: jsonb('citations'),
+    rating: text('rating'), // 'up' | 'down' | null - user feedback, assistant messages only
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

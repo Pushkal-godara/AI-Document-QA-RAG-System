@@ -6,6 +6,7 @@ import { schema, withTenant } from '@rag/db';
 import { DbService } from '../db/db.service';
 import { StorageService } from '../storage/storage.service';
 import { OllamaService } from '../llm/ollama.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { extractText } from './parsing';
 import { chunkByTokens, countTokens } from './tokenizer';
 
@@ -22,6 +23,7 @@ export class IngestionProcessor extends WorkerHost {
     private readonly dbService: DbService,
     private readonly storage: StorageService,
     private readonly ollama: OllamaService,
+    private readonly metrics: MetricsService,
   ) {
     super();
   }
@@ -29,6 +31,7 @@ export class IngestionProcessor extends WorkerHost {
   async process(job: Job<IngestionJobData>): Promise<void> {
     const { documentId, tenantId } = job.data;
     const db = this.dbService.db;
+    const start = Date.now();
 
     try {
       const [document] = await withTenant(db, tenantId, async (tx) => {
@@ -69,10 +72,12 @@ export class IngestionProcessor extends WorkerHost {
           .where(eq(schema.documents.id, documentId));
       });
 
+      this.metrics.recordIngestion('ready', Date.now() - start);
       this.logger.log(`Ingested document ${documentId}: ${textChunks.length} chunks`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Ingestion failed for document ${documentId}: ${message}`);
+      this.metrics.recordIngestion('failed', Date.now() - start);
       await withTenant(db, tenantId, (tx) =>
         tx
           .update(schema.documents)
